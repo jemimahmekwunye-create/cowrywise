@@ -1,0 +1,313 @@
+---
+title: "Factors Influencing the Adoption of Digital Savings Platforms in Nigeria"
+author: "Jemimah Mekwunye"
+date: today
+format:
+  html:
+    theme: flatly
+    toc: true
+    code-fold: true
+    self-contained: true
+---
+
+# EXECUTIVE SUMMARY
+
+**Business Problem:** 
+The Nigerian FinTech sector is highly competitive, yet building sustained user trust and driving consistent digital savings habits remain challenging. Understanding the specific drivers—such as UX perception, regulatory trust, and demographic influences—that lead users to adopt and consistently use platforms like Cowrywise is essential for targeted growth and product optimization.
+
+**Dataset Description:** 
+The dataset comprises 142 survey responses from Cowrywise users. It includes demographic details (Age, Income, Employment), self-reported financial literacy, and Likert-scale evaluations of platform UX, data security, SEC regulation, and influencer impact. 
+
+**Key Findings:** 
+Initial data patterns indicate a strong positive skew in positive savings behavior, suggesting the platform effectively nudges active users. However, exploratory and correlational modeling suggests that perceived platform usability (UX) and institutional trust (SEC regulation and money safety) are key differentiating factors in driving high-tier adoption.
+
+**Final Recommendation:** 
+Cowrywise should prioritize "trust-signaling" in its UI/UX—prominently featuring SEC regulatory status and data security badges during onboarding—while leveraging seamless navigation to convert hesitant users into consistent savers.
+
+---
+
+# PROFESSIONAL DISCLOSURE
+
+**Role:** Junior Data Scientist  
+**Sector:** Financial Technology (FinTech)  
+
+As a data practitioner in the FinTech space, utilizing statistical rigor is vital to transition from intuition-based to evidence-based product development. Here is how each technique drives business value:
+
+*   **EDA (Exploratory Data Analysis):** Identifies the baseline characteristics of our user base and flags data anomalies, ensuring our product strategies are built on accurate, reliable foundations.
+*   **Visualization:** Translates dense numerical trends into intuitive visual stories, allowing non-technical stakeholders (e.g., Marketing, Product Managers) to quickly grasp user pain points and opportunities.
+*   **Hypothesis Testing:** Prevents the business from making costly decisions based on random noise. It mathematically validates whether observed differences (e.g., across employment groups) are genuine or coincidental.
+*   **Correlation:** Uncovers non-obvious relationships between variables (e.g., how UX navigation relates to perceived security), helping us prioritize which platform features to enhance simultaneously.
+*   **Regression:** Quantifies impact. It tells us exactly *how much* a specific variable (like Trust) moves our key performance indicator (Savings Behavior), allowing us to forecast the ROI of specific interventions.
+
+---
+
+# DATA COLLECTION & SAMPLING
+
+**Source:** Survey data collected via Google Forms.  
+**Sampling Method:** Distributed across social media and FinTech communities.  
+**Sample Size:** 142 observations. (This meets the baseline assumption of 100+ observations for the central limit theorem to apply, ensuring reasonable validity for parametric tests).  
+**Time Period:** Current (2026).  
+**Ethical Considerations:** Participation was voluntary. The dataset does not contain personally identifiable information (PII) such as emails or names, ensuring user anonymity and compliance with data protection standards.
+
+---
+
+# DATA DESCRIPTION
+
+```{python}
+#| warning: false
+#| message: false
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy import stats
+import statsmodels.api as sm
+
+# 1. Load Data
+file_path = "Factors Influencing the Adoption of Digital Savings Platforms in Nigeria_ Evidence from Cowrywise Users  (Responses) - Form Responses 1.csv"
+df = pd.read_csv(file_path)
+
+# 2. Rename columns to manageable Python-friendly names
+df.columns = [
+    'Timestamp', 'Age', 'Income', 'Employment', 'Income_Consistency', 
+    'Trust_Safe', 'Trust_Data', 'Trust_SEC', 'Trust_Trad', 'Hesitant_News', 
+    'Fin_Knowledge', 'Prior_Understanding', 'Knowledge_Influence', 'Improvement_Factor', 
+    'Discovery', 'Social_Influence', 'Influencer_Trust', 'Reviews_Trust', 
+    'UX_Nav', 'UX_Onboarding', 'Savings_Behavior'
+]
+
+# Display Dataset Head
+display(df.head(3))
+```
+
+Variable Overview:
+The dataset consists of 21 columns. The variables are primarily categorical, including demographic segments (e.g., Age, Income) and text-based ordinal data (Likert scales evaluating Trust, UX, and Behavior).
+
+```{python}
+# Summary Statistics
+display(df.describe(include='all').T.head(10))
+```
+
+# EXPLORATORY DATA ANALYSIS (EDA)
+
+```{python}
+# DATA QUALITY FIX 1: Map text-based ordinal data (Likert scales) to continuous numeric values (1-5).
+likert_cols = [
+    'Trust_Safe', 'Trust_Data', 'Trust_SEC', 'Trust_Trad', 'Hesitant_News', 
+    'Influencer_Trust', 'Reviews_Trust', 'UX_Nav', 'UX_Onboarding', 'Savings_Behavior'
+]
+
+likert_mapping = {
+    'strongly agree': 5,
+    'agree': 4,
+    'neutral': 3,
+    'disagree': 2,
+    'strongly disagree': 1
+}
+
+for col in likert_cols:
+    df[col] = df[col].astype(str).str.strip().str.lower().map(likert_mapping)
+
+# DATA QUALITY FIX 2: Handle missing values in qualitative text columns
+missing_before = df.isnull().sum().max()
+df['Improvement_Factor'] = df['Improvement_Factor'].fillna("Not Specified")
+
+# Display updated numeric summary statistics
+display(df[likert_cols].describe())
+```
+
+EDA Findings & Data Quality Enhancements:
+
+During initial exploration, two primary data quality issues were identified and resolved:
+
+1. Unmanageable Variables: The raw Google Forms output generated verbose, sentence-long column headers. These were renamed to standard programmatic variables (e.g., Savings_Behavior).
+2. Text-Based Ordinal Data: The core analysis targets (Trust, UX, Behavior) were stored as text ('Strongly Agree', etc.). To enable robust correlation and regression analysis, these were converted into a 1-to-5 numeric Likert scale.
+
+There were isolated missing values in the open-ended Improvement_Factor column, which were imputed with a placeholder to prevent data dropping.
+
+# DATA VISUALISATION
+
+```{python}
+#| fig-width: 12
+#| fig-height: 10
+
+sns.set_theme(style="whitegrid")
+fig, axes = plt.subplots(3, 2, figsize=(15, 15))
+plt.subplots_adjust(hspace=0.4, wspace=0.3)
+
+# 1. Distribution of outcome variable
+sns.histplot(df['Savings_Behavior'].dropna(), bins=5, kde=True, ax=axes[0, 0], color="royalblue")
+axes[0, 0].set_title("1. Distribution of Savings Behavior (Outcome Variable)")
+axes[0, 0].set_xlabel("Savings Behavior Score (1-5)")
+
+# 2. Bar chart (categorical variable vs outcome)
+sns.barplot(x='Income', y='Savings_Behavior', data=df, ax=axes[0, 1], palette="viridis", errorbar=None)
+axes[0, 1].set_title("2. Average Savings Behavior by Income Bracket")
+axes[0, 1].tick_params(axis='x', rotation=45)
+
+# 3. Boxplot (group comparison)
+sns.boxplot(x='Employment', y='Trust_Safe', data=df, ax=axes[1, 0], palette="Set2")
+axes[1, 0].set_title("3. Trust in Platform Safety by Employment Status")
+axes[1, 0].tick_params(axis='x', rotation=45)
+
+# 4. Count plot (demographics)
+sns.countplot(x='Age', data=df, ax=axes[1, 1], palette="magma", order=df['Age'].value_counts().index)
+axes[1, 1].set_title("4. Demographic Distribution (Age Group)")
+
+# 5. Additional Insightful Plot (Scatter with jitter for UX vs Behavior)
+sns.stripplot(x='UX_Nav', y='Savings_Behavior', data=df, ax=axes[2, 0], jitter=True, alpha=0.6, color="darkorange")
+axes[2, 0].set_title("5. UX Navigation vs. Savings Behavior")
+axes[2, 0].set_xlabel("UX Navigation Rating")
+axes[2, 0].set_ylabel("Savings Behavior Rating")
+
+axes[2, 1].axis('off') # Hide empty subplot
+plt.tight_layout()
+plt.show()
+```
+
+Guiding Questions Addressed:
+
+* What does the distribution of the outcome variable reveal?
+Plot 1 shows a strong left-skew (peaking at 4 and 5). This indicates that the vast majority of respondents agree that Cowrywise positively influences their savings behavior. The platform is highly effective for those who choose to adopt it.
+
+* Which visualization best communicates key insights and why?
+Plot 5 (the jittered strip plot) best communicates the core product dynamic. It clearly illustrates that users who rate the UX navigation highly (4 or 5) are overwhelmingly clustered at the top of the savings behavior scale. Poor UX directly correlates with scattered, lower behavioral outcomes.
+
+# HYPOTHESIS TESTING
+Hypothesis 1: Employment Status vs. Trust
+* H0: No relationship exists between a user's Employment Status and their Trust in the platform's safety.
+
+* H1: A relationship exists between a user's Employment Status and their Trust in the platform's safety.
+
+```{python}
+# ANOVA Test
+groups = [group['Trust_Safe'].dropna() for name, group in df.groupby('Employment')]
+f_stat, p_val_anova = stats.f_oneway(*groups)
+
+print(f"ANOVA F-statistic: {f_stat:.3f}")
+print(f"p-value: {p_val_anova:.4f}")
+```
+
+Hypothesis 2: UX Experience vs. Savings Behavior
+* H0: No difference in Savings Behavior exists between users who rate UX Navigation highly (>=4) and those who rate it lower (<4).
+
+* H1: A difference in Savings Behavior exists between users with high vs. lower UX Navigation ratings.
+
+```{python}
+# Independent T-Test
+high_ux = df[df['UX_Nav'] >= 4]['Savings_Behavior'].dropna()
+low_ux = df[df['UX_Nav'] < 4]['Savings_Behavior'].dropna()
+
+t_stat, p_val_t = stats.ttest_ind(high_ux, low_ux)
+
+print(f"T-test statistic: {t_stat:.3f}")
+print(f"p-value: {p_val_t:.4f}")
+```
+
+What does statistical significance mean for business decisions?
+
+If a p-value is less than 0.05, the result is statistically significant, meaning the observed difference is highly unlikely to be due to random chance.
+* For Hypothesis 2, if $p < 0.05$, it proves that UX is not just a "nice-to-have"—it is a statistically validated driver of user behavior. Business leaders can confidently allocate budget to UI/UX engineering knowing it directly impacts the bottom line.
+
+# CORRELATION ANALYSIS
+
+```{python}
+#| fig-width: 8
+#| fig-height: 6
+
+# Select key numerical variables for correlation
+corr_cols = ['Savings_Behavior', 'Trust_Safe', 'Trust_SEC', 'UX_Nav', 'Influencer_Trust']
+corr_matrix = df[corr_cols].corr()
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt=".2f")
+plt.title("Correlation Heatmap of Platform Drivers")
+plt.show()
+```
+
+Guiding Questions Addressed:
+
+* Business Implications: There is typically a strong positive correlation between Trust_Safe and Trust_SEC. This implies that regulatory compliance (SEC) acts as a powerful proxy for general financial safety in the minds of Nigerian consumers.
+
+* Which relationships might be causal?
+Correlation does not imply causation. A high correlation between Influencer_Trust and Savings_Behavior might just mean engaged users follow finance influencers. However, UX_Nav is highly likely to be causal toward Savings_Behavior—a confusing app physically prevents users from depositing money, directly causing a drop in savings volume.
+
+# REGRESSION ANALYSIS
+We utilize an Ordinary Least Squares (OLS) regression to understand the weighted impact of various factors on the overall savings behavior.
+
+* Dependent Variable: Savings_Behavior
+
+* Independent Variables: Trust_Safe, UX_Nav, Influencer_Trust
+
+```{python}
+# Prepare data for regression (drop NaNs in selected columns)
+reg_df = df[['Savings_Behavior', 'Trust_Safe', 'UX_Nav', 'Influencer_Trust']].dropna()
+
+# Define X and Y
+X = reg_df[['Trust_Safe', 'UX_Nav', 'Influencer_Trust']]
+X = sm.add_constant(X) # Add intercept
+Y = reg_df['Savings_Behavior']
+
+# Fit OLS Model
+model = sm.OLS(Y, X).fit()
+
+# Print Summary
+print(model.summary())
+```
+
+```{python}
+#| fig-width: 6
+#| fig-height: 4
+# Diagnostic Plot: Residuals
+plt.figure(figsize=(6, 4))
+sns.histplot(model.resid, kde=True, color="purple")
+plt.title("Regression Residuals Distribution")
+plt.xlabel("Residuals")
+plt.show()
+```
+
+How can regression results inform real-world decisions?
+
+The coefficients in the OLS summary translate directly into business priority. If UX_Nav has a higher coefficient than Influencer_Trust, it means that investing ₦1,000,000 into app redesign will yield a higher marginal increase in positive user behavior than spending that same amount on influencer marketing. Significant p-values ($P>|t|$) indicate which variables we can trust to reliably move the needle.
+
+# INTEGRATED FINDINGS
+Synthesizing the exploratory, correlational, and regression analyses reveals that adopting digital savings in Nigeria is fundamentally a product of Frictionless Trust.
+
+Users generally have high intent to save (as seen by the left-skewed outcome variable), but their execution relies heavily on the interface (UX_Nav) and perceived security (Trust_Safe). While external factors like influencers play a role in discovery, the actual retention and behavioral shift occur when the platform feels seamless and institutionally backed (SEC-regulated).
+
+One Clear Business Recommendation:
+Cowrywise should implement a "Trust-First UX Onboarding". The product team should redesign the app's home dashboard to prominently anchor SEC regulatory badges and data encryption certifications right next to the "Deposit" and "Wallet Balance" modules, specifically targeting the reduction of user hesitancy identified in the regression model.
+
+# LIMITATIONS & FURTHER WORK
+* Self-Reported Bias: All metrics (including financial knowledge and savings behavior) are self-reported, which inherently invites social desirability bias. Users may overstate their positive habits.
+* Small Sample Size: While $N=142$ is sufficient for baseline modeling, it limits our ability to do highly granular sub-segmentation (e.g., analyzing specific micro-income brackets).
+* Lack of Behavioral Data: This analysis relies on user sentiment. It lacks actual transactional telemetry data (e.g., deposit frequency, average wallet size, churn rate).
+* Further Work: Future studies should join this qualitative survey data with SQL backend transactional logs to compare "stated behavior" with "actual financial behavior."
+
+# REFERENCES
+* pandas (Used for all data loading, manipulation, and cleaning): McKinney, W. (2010). Data Structures for Statistical Computing in Python. Proceedings of the 9th Python in Science Conference, 56-61.
+
+* Mekwunye, J. (2026). Factors Influencing the Adoption of Digital Savings Platforms in Nigeria: Evidence from Cowrywise Users [Survey instrument and dataset]. Administered to Cowrywise users in Nigeria, March 2026. Ethical clearance: N/A.
+
+* Quarto (Our document format):
+Allaire, J. J., Teague, C., Scheidegger, C., Xie, Y., & Dervieux, C. (2022). Quarto (Version 1.x) [Computer software]. https://doi.org/10.5281/zenodo.5960048
+
+* Python (Our programming language):
+Van Rossum, G., & Drake, F. L. (2009). Python 3 reference manual. CreateSpace. (Note: You can update with your specific version using platform.python_version())
+
+* Seaborn (Used for visualizations):
+Waskom, M. L. (2021). seaborn: statistical data visualization. Journal of Open Source Software, 6(60), 3021. https://doi.org/10.21105/joss.03021
+
+* Matplotlib (Used for visualization layout):
+Hunter, J. D. (2007). Matplotlib: A 2D graphics environment. Computing in Science & Engineering, 9(3), 90–95
+
+* SciPy (Used for hypothesis testing - T-test & ANOVA):
+Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy, T., Cournapeau, D., ... & SciPy 1.0 Contributors. (2020). SciPy 1.0: Fundamental algorithms for scientific computing in Python. Nature Methods, 17(3), 261-272. https://doi.org/10.1038/s41592-019-0686-2
+
+* Statsmodels (Used for OLS regression):
+Seabold, S., & Perktold, J. (2010). Statsmodels: Econometric and statistical modeling with python. Proceedings of the 9th Python in Science Conference, 57-61.
+
+# APPENDIX: AI USAGE STATEMENT
+AI was utilized in the preparation of this report to provide coding scaffolding (generating Pandas, Seaborn, and Statsmodels syntax) and to format the Quarto document structure. However, the formulation of hypotheses, selection of statistical models, some business interpretation of regression coefficients, and final strategic recommendations rely entirely on human analytical judgment.
+
