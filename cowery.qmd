@@ -210,6 +210,7 @@ print(f"p-value: {p_val_t:.4f}")
 What does statistical significance mean for business decisions?
 
 If a p-value is less than 0.05, the result is statistically significant, meaning the observed difference is highly unlikely to be due to random chance.
+
 * For Hypothesis 2, if $p < 0.05$, it proves that UX is not just a "nice-to-have"—it is a statistically validated driver of user behavior. Business leaders can confidently allocate budget to UI/UX engineering knowing it directly impacts the bottom line.
 
 # CORRELATION ANALYSIS
