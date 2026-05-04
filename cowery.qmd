@@ -311,3 +311,5 @@ Seabold, S., & Perktold, J. (2010). Statsmodels: Econometric and statistical mod
 # APPENDIX: AI USAGE STATEMENT
 AI was utilized in the preparation of this report to provide coding scaffolding (generating Pandas, Seaborn, and Statsmodels syntax) and to format the Quarto document structure. However, the formulation of hypotheses, selection of statistical models, some business interpretation of regression coefficients, and final strategic recommendations rely entirely on human analytical judgment.
 
+
+**Link:** https://github.com/jemimahmekwunye-create/cowrywise
