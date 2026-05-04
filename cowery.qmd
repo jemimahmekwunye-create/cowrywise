@@ -176,6 +176,7 @@ Plot 5 (the jittered strip plot) best communicates the core product dynamic. It 
 
 # HYPOTHESIS TESTING
 Hypothesis 1: Employment Status vs. Trust
+
 * H0: No relationship exists between a user's Employment Status and their Trust in the platform's safety.
 
 * H1: A relationship exists between a user's Employment Status and their Trust in the platform's safety.
@@ -190,6 +191,7 @@ print(f"p-value: {p_val_anova:.4f}")
 ```
 
 Hypothesis 2: UX Experience vs. Savings Behavior
+
 * H0: No difference in Savings Behavior exists between users who rate UX Navigation highly (>=4) and those who rate it lower (<4).
 
 * H1: A difference in Savings Behavior exists between users with high vs. lower UX Navigation ratings.
